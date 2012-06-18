@@ -8,6 +8,8 @@
     </p>
   </ifLoggedIn>
 
+  <registerError/>
+
   <ifLoggedOut>
     <p>
       <bind tag="action">register</bind>

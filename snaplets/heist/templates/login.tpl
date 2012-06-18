@@ -12,6 +12,10 @@
           <apply template="logoutButton"/>
       </ifLoggedIn>
 
+      <p>
+        <loginError/>
+      </p>
+
       <ifLoggedOut>
         <p>
           <bind tag="action">login</bind>

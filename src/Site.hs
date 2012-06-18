@@ -11,6 +11,7 @@ module Site
 
 ------------------------------------------------------------------------------
 import           Control.Applicative
+import           Control.Monad.CatchIO (catch)
 import           Control.Monad.Trans
 import           Control.Monad.State
 import           Data.ByteString (ByteString)
@@ -55,9 +56,14 @@ registerHandler = do
   case (l, p) of
     (Nothing, _) -> render "register"
     (_, Nothing) -> render "register"
-    (Just _, Just _) -> do
-      registerUser "login" "password"
-      redirect' "/" 303
+    (Just _, Just _) -> registerAction `Control.Monad.CatchIO.catch` duplicateLoginHandler 
+    where
+      registerAction = do
+        registerUser "login" "password"
+        loginUser "login" "password" Nothing (const (redirect' "/" 303)) (redirect' "/" 303)
+
+duplicateLoginHandler :: BackendError -> Handler App (AuthManager App) ()
+duplicateLoginHandler _ = heistLocal (bindSplices [("registerError", textSplice "That username already exists")]) $ render "register"
           
 loginHandler :: Handler App (AuthManager App) ()
 loginHandler = do
@@ -67,7 +73,14 @@ loginHandler = do
     (Nothing, _) -> render "login"
     (_, Nothing) -> render "login"
     (Just _, Just _) -> do
-      loginUser "login" "password" Nothing (\_ -> redirect' "/" 303) (redirect' "/" 303)
+      loginUser "login" "password" Nothing (const loginErrorPage) loginSuccess
+      where
+        loginErrorPage = heistLocal (bindSplices [("loginError", textSplice "Incorrect username or password.")]) $ render "login"
+        loginSuccess = do
+          u <- currentUser
+          case u of
+            Just _ -> redirect' "/" 303
+            Nothing -> loginErrorPage
         
 logoutHandler :: Handler App (AuthManager App) ()
 logoutHandler = do
